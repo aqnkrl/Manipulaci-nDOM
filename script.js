@@ -1,4 +1,4 @@
-// 1. AGREGAR NUEVAS TAREAS
+// --- 1. AGREGAR NUEVAS TAREAS ---
 const formTarea = document.getElementById('formTarea');
 
 formTarea.addEventListener('submit', (e) => {
@@ -31,38 +31,34 @@ formTarea.addEventListener('submit', (e) => {
     `;
 
     listaTareas.appendChild(nuevaTarea);
-
     inputTitulo.value = '';
     
     actualizarEstadisticas();
 });
 
-// 2. ELIMINAR TAREAS
+// --- 2. ELIMINAR TAREAS ---
 const listaParaEliminar = document.getElementById('listaTareas');
 
 listaParaEliminar.addEventListener('click', (e) => {
     const botonEliminar = e.target.closest('[data-action="del"]');
-    
     if (botonEliminar) {
-        const tarjeta = botonEliminar.closest('.card');
-        tarjeta.remove();
+        botonEliminar.closest('.card').remove();
         actualizarEstadisticas();
     }
 });
 
-// 3. MARCAR COMO COMPLETADA 
+// --- 3. MARCAR COMO COMPLETADA ---
 const listaParaCompletar = document.getElementById('listaTareas');
 
 listaParaCompletar.addEventListener('click', (e) => {
     const btnHecho = e.target.closest('[data-action="done"]');
     if (btnHecho) {
-        const tarjeta = btnHecho.closest('.card');
-        tarjeta.classList.toggle('is-done');
+        btnHecho.closest('.card').classList.toggle('is-done');
         actualizarEstadisticas(); 
     }
 });
 
-// 4. MARCAR COMO FAVORITA
+// --- 4. MARCAR COMO FAVORITA ---
 const listaParaFavoritos = document.getElementById('listaTareas');
 
 listaParaFavoritos.addEventListener('click', (e) => {
@@ -70,17 +66,21 @@ listaParaFavoritos.addEventListener('click', (e) => {
 
     if (btnFav) {
         const tarjeta = btnFav.closest('.card');
+        const esFavActual = tarjeta.dataset.fav === '1';
 
-        const esFav = tarjeta.dataset.fav === '1';
+        tarjeta.dataset.fav = esFavActual ? '0' : '1';
+        btnFav.textContent = esFavActual ? '☆' : '★';
 
-        tarjeta.dataset.fav = esFav ? '0' : '1';
+        const filtroActivo = document.querySelector('.chip.is-active').dataset.filter;
+        if (filtroActivo === 'fav' && esFavActual) {
+            tarjeta.classList.add('is-hidden');
+        }
 
-        btnFav.textContent = esFav ? '☆' : '★';
         actualizarEstadisticas();
     }
 });
 
-// 5. FILTRAR POR CATEGORÍA
+// --- 5. FILTRAR POR CATEGORÍA ---
 const chips = document.querySelectorAll('.chip');
 
 chips.forEach(btn => {
@@ -103,48 +103,72 @@ chips.forEach(btn => {
     });
 });
 
-// 6. BUSCAR POR TEXTO
+// --- 6. BUSCAR POR TEXTO ---
 const inputBusqueda = document.getElementById('inputBuscar');
 
 inputBusqueda.addEventListener('input', () => {
     const texto = inputBusqueda.value.toLowerCase();
+    const filtroActivo = document.querySelector('.chip.is-active').dataset.filter;
+
     document.querySelectorAll('.card').forEach(tarjeta => {
         const titulo = tarjeta.querySelector('.card__title').textContent.toLowerCase();
+        const esFav = tarjeta.dataset.fav === '1';
+        const tag = tarjeta.dataset.tag;
+
+        // Para que la búsqueda respete el filtro activo
+        const cumpleFiltro = (filtroActivo === 'all') || 
+                             (filtroActivo === 'fav' && esFav) || 
+                             (filtroActivo === tag);
         
-        if (titulo.includes(texto)) {
-            tarjeta.classList.remove('is-hidden');
-        } else {
-            tarjeta.classList.add('is-hidden');
-        }
+        const coincideTexto = titulo.includes(texto);
+
+        tarjeta.classList.toggle('is-hidden', !(cumpleFiltro && coincideTexto));
     });
     actualizarEstadisticas();
 });
 
-// 7. LIMPIAR BÚSQUEDA
+// --- 7. LIMPIAR BÚSQUEDA (CORREGIDO PARA RESPETAR FILTROS) ---
 const btnLimpiarCheck = document.getElementById('btnLimpiarBuscar');
 
 btnLimpiarCheck.addEventListener('click', () => {
+    // 1. Limpiamos el texto
     document.getElementById('inputBuscar').value = '';
+
+    // 2. Obtenemos el filtro que está seleccionado actualmente
+    const filtroActivo = document.querySelector('.chip.is-active').dataset.filter;
+
+    // 3. Mostramos solo las tarjetas que pertenecen a ese filtro
     document.querySelectorAll('.card').forEach(tarjeta => {
-        tarjeta.classList.remove('is-hidden');
+        const esFav = tarjeta.dataset.fav === '1';
+        const tag = tarjeta.dataset.tag;
+
+        const cumpleFiltro = (filtroActivo === 'all') || 
+                             (filtroActivo === 'fav' && esFav) || 
+                             (filtroActivo === tag);
+
+        // Si cumple el filtro de arriba, le quitamos el hidden, si no, se queda oculto
+        tarjeta.classList.toggle('is-hidden', !cumpleFiltro);
     });
+
     actualizarEstadisticas();
 });
 
-// 8Y9. ACTUALIZAR ESTADÍSTICAS Y ESTADO VACIO
+// --- 8 Y 9. ESTADÍSTICAS Y MENSAJE DE VACÍO ---
 function actualizarEstadisticas() {
     const todas = document.querySelectorAll('.card').length;
     const favoritas = document.querySelectorAll('.card[data-fav="1"]').length;
-
-    const visibles = document.querySelectorAll('.card:not(.is-hidden):not(.is-done)').length;
+    const visibles = document.querySelectorAll('.card:not(.is-hidden)').length;
 
     document.getElementById('statTotal').textContent = todas;
     document.getElementById('statVisibles').textContent = visibles;
     document.getElementById('statFavs').textContent = favoritas;
 
-    const enPantalla = document.querySelectorAll('.card:not(.is-hidden)').length;
-    document.getElementById('emptyState').classList.toggle('is-hidden', enPantalla > 0);
+    const emptyState = document.getElementById('emptyState');
+    if (visibles === 0) {
+        emptyState.classList.remove('is-hidden');
+    } else {
+        emptyState.classList.add('is-hidden');
+    }
 }
 
 actualizarEstadisticas();
-
